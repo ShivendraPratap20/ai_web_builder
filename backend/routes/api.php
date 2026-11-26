@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
@@ -20,3 +21,6 @@ Route::post('/receive-data', function (Request $request) {
         'data' => $data
     ]);
 });
+
+Route::post('/signup', [AuthController::class, 'registerUser']);
+Route::post('/login', [AuthController::class, 'userLogin']);

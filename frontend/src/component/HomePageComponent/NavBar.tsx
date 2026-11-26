@@ -1,7 +1,9 @@
 import  { useState } from 'react';
+import { useModalContext } from '../../context/ModalContext';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { openModal }: { openModal: (param:string) => void} = useModalContext();
 
   const navLinks = [
     { name: 'Features', href: '#features' },
@@ -58,6 +60,7 @@ export default function Navbar() {
             <button
               type="button"
               className="text-sm font-medium text-[#475569] hover:text-[#0F172A] px-3 py-2 rounded-lg hover:bg-[#F8FAFC] transition-colors"
+              onClick={() => openModal('login')}
             >
               Sign in
             </button>
