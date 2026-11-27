@@ -10,7 +10,6 @@ const api: AxiosInstance = axios.create({
     withXSRFToken: true,
     headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
     },
 });
 

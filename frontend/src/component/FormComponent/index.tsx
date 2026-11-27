@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Sparkles,
-  Building2,
-  Phone,
-  MapPin,
-  Globe,
   Check,
   Save,
-  CheckCircle2,
-  RotateCcw,
-  Edit3,
-  Layers,
-  Code2
 } from 'lucide-react';
+import { useAppDispatch, useAppSelector } from '../../hooks/useRedux';
 import BusinessDetails from './FormSteps/BusinessDetails';
+import ProjectDetails from './FormSteps/ProjectDetails';
+import WebsiteRequirement from './FormSteps/WebsiteRequirement';
+import AssessRequirement from './FormSteps/AssetsRequirement';
+import WebsiteStylePreferences from './FormSteps/WebsiteStylePreferences';
+import FinalReview from './FormSteps/FinalPreview';
+import { resetWebsiteCreation } from '../../redux/slice/websiteCreationSlice';
+import { useSubmitWebsiteCreation, getReadableErrorMessage } from '../../hooks/useSubmitWebsiteCreation';
 
 const STEPS = [
   { id: 1, title: 'Business Details', shortTitle: 'Business' },
@@ -24,66 +23,114 @@ const STEPS = [
   { id: 6, title: 'Final Review', shortTitle: 'Review' }
 ];
 
-const INITIAL_FORM_DATA = {
-  businessName: '',
-  ownerName: '',
-  targetAudience: '',
-  email: '',
-  contactNumber: '',
-  whatsappNumber: '',
-  sameAsContact: false,
-  address: {
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    postalCode: ''
-  },
-  socialLinks: {
-    instagram: '',
-    facebook: '',
-    youtube: ''
-  }
-};
+type FileRegistry = Record<string, File>;
+
 
 export default function Form() {
-  const [currentStep] = useState(1);
-  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
+  const [currentStep, setCurrentStep] = useState(1);
   const [draftSavedToast, setDraftSavedToast] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [showJsonPreview, setShowJsonPreview] = useState(false);
 
-  // Sync WhatsApp number automatically when 'sameAsContact' is checked
-  useEffect(() => {
-    if (formData.sameAsContact) {
-      setFormData((prev) => ({
-        ...prev,
-        whatsappNumber: prev.contactNumber
-      }));
-    }
-  }, [formData.contactNumber, formData.sameAsContact]);
+  const dispatch = useAppDispatch();
+  const data = useAppSelector((state) => state.websiteCreation);
+  const { mutate: submitWebsite, isPending: isSubmitting, error: submitRawError, reset: resetMutationError } = useSubmitWebsiteCreation();
 
+  const [fileRegistry, setFileRegistry] = useState<FileRegistry>({});
 
-  const handleSaveDraft = () => {
-    try {
-      localStorage.setItem('ai_website_builder_step1_draft', JSON.stringify(formData));
-    } catch {
-      // Safe fallback if storage is restricted
-    }
-    setDraftSavedToast(true);
-    setTimeout(() => setDraftSavedToast(false), 3000);
+  const addFile = (id: string, file: File) => {
+    setFileRegistry(prev => ({
+      ...prev,
+      [id]: file
+    }));
   };
 
- 
+  const removeFile = (id: string) => {
+    setFileRegistry(prev => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
+    });
+  };
 
-  const handleReset = () => {
-    setFormData(INITIAL_FORM_DATA);
-    setErrors({});
-    setTouched({});
-    setIsSubmitted(false);
-    setShowJsonPreview(false);
+  const moveToNextStep = () => {
+    if ((currentStep + 1) <= 6)
+      setCurrentStep((step) => step + 1);
+
+  };
+
+  const prevStep = () => {
+    if ((currentStep - 1) > 0)
+      setCurrentStep((step) => step - 1)
+  }
+
+  const handleFinalSubmit = () => {
+    resetMutationError();
+    submitWebsite(
+      { formData: data, fileRegistry },
+      {
+        onSuccess: () => {
+          dispatch(resetWebsiteCreation());
+          setFileRegistry({});
+        },
+      }
+    );
+  }
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <BusinessDetails
+            handleNextStep={moveToNextStep}
+          />
+        );
+      case 2:
+        return (
+          <ProjectDetails
+            handleNextStep={moveToNextStep}
+            handlePrevStep={prevStep}
+          />
+        );
+
+      case 3:
+        return (
+          <WebsiteRequirement
+            handleNextStep={moveToNextStep}
+            handlePrevStep={prevStep}
+          />
+        );
+
+      case 4:
+        return (
+          <AssessRequirement
+            handleNextStep={moveToNextStep}
+            handlePrevStep={prevStep}
+            fileRegistry={fileRegistry}
+            addFile={addFile}
+            removeFile={removeFile}
+          />
+        );
+
+      case 5:
+        return (
+          <WebsiteStylePreferences
+            handleNextStep={moveToNextStep}
+            handlePrevStep={prevStep}
+          />
+        );
+      case 6:
+        return (
+          <FinalReview
+            handleNextStep={handleFinalSubmit}
+            fileRegistry={fileRegistry}
+            isSubmitting={isSubmitting}
+            submitError={submitRawError ? getReadableErrorMessage(submitRawError) : null}
+          />
+        );
+      default:
+        return <div><h1>Step {currentStep}</h1>
+          <button onClick={moveToNextStep}>Next</button>
+        </div>;
+    }
   };
 
   return (
@@ -116,7 +163,7 @@ export default function Form() {
             )}
             <button
               type="button"
-              onClick={handleSaveDraft}
+              onClick={() => { }}
               className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-[#0F172A] bg-[#F8FAFC] hover:bg-slate-100 border border-[#E2E8F0] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[#4F46E5]/20"
             >
               <Save className="w-4 h-4 text-[#475569]" />
@@ -170,9 +217,8 @@ export default function Form() {
                         aria-hidden="true"
                       >
                         <div
-                          className={`h-full transition-all duration-300 ${
-                            isCompleted ? 'w-full bg-[#4F46E5]' : 'w-0'
-                          }`}
+                          className={`h-full transition-all duration-300 ${isCompleted ? 'w-full bg-[#4F46E5]' : 'w-0'
+                            }`}
                         />
                       </div>
                     )}
@@ -180,13 +226,12 @@ export default function Form() {
                     {/* Step Circle Badge */}
                     <div className="relative z-10 flex items-center gap-2 mb-2.5">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                          isActive
-                            ? 'bg-[#4F46E5] text-white ring-4 ring-[#4F46E5]/15 shadow-xs'
-                            : isCompleted
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${isActive
+                          ? 'bg-[#4F46E5] text-white ring-4 ring-[#4F46E5]/15 shadow-xs'
+                          : isCompleted
                             ? 'bg-[#4F46E5] text-white'
                             : 'bg-[#F8FAFC] text-[#94A3B8] border border-[#E2E8F0]'
-                        }`}
+                          }`}
                       >
                         {isCompleted ? <Check className="w-4 h-4" /> : step.id}
                       </div>
@@ -195,20 +240,18 @@ export default function Form() {
                     {/* Step Title */}
                     <div className="pr-2">
                       <span
-                        className={`text-[11px] font-semibold uppercase tracking-wider block ${
-                          isActive ? 'text-[#4F46E5]' : 'text-[#94A3B8]'
-                        }`}
+                        className={`text-[11px] font-semibold uppercase tracking-wider block ${isActive ? 'text-[#4F46E5]' : 'text-[#94A3B8]'
+                          }`}
                       >
                         Step {step.id}
                       </span>
                       <span
-                        className={`text-xs font-semibold leading-snug block mt-0.5 ${
-                          isActive
-                            ? 'text-[#0F172A]'
-                            : isCompleted
+                        className={`text-xs font-semibold leading-snug block mt-0.5 ${isActive
+                          ? 'text-[#0F172A]'
+                          : isCompleted
                             ? 'text-[#475569]'
                             : 'text-[#94A3B8]'
-                        }`}
+                          }`}
                       >
                         {step.title}
                       </span>
@@ -219,197 +262,11 @@ export default function Form() {
             </ol>
           </div>
         </nav>
-
-        {/* Submission Confirmation Banner & Summary Preview */}
-        {isSubmitted ? (
-          <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-xl shadow-xs overflow-hidden">
-            {/* Top Status Banner */}
-            <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-6 py-6 sm:px-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className="w-11 h-11 rounded-xl bg-[#4F46E5]/10 border border-[#4F46E5]/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-6 h-6 text-[#4F46E5]" />
-                </div>
-                <div>
-                  <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4F46E5] uppercase tracking-wider mb-1">
-                    Step 1 Completed
-                  </div>
-                  <h1 className="text-xl font-bold text-[#0F172A]">
-                    Business Details Captured Successfully
-                  </h1>
-                  <p className="text-sm text-[#475569] mt-1">
-                    Your business profile is saved. <strong className="font-semibold text-[#0F172A]">Step 2: Project Details</strong> is ready to be built next.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setIsSubmitted(false)}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-[#0F172A] bg-[#FFFFFF] hover:bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg transition-colors"
-                >
-                  <Edit3 className="w-4 h-4 text-[#475569]" />
-                  <span>Edit Step 1</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-[#475569] hover:text-[#0F172A] bg-[#F8FAFC] hover:bg-slate-100 border border-[#E2E8F0] rounded-lg transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Reset</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Captured Summary Grid */}
-            <div className="p-6 sm:p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-[#475569]">
-                  Captured Step 1 Summary
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setShowJsonPreview((prev) => !prev)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-[#4F46E5] hover:text-[#4338CA] transition-colors"
-                >
-                  <Code2 className="w-3.5 h-3.5" />
-                  <span>{showJsonPreview ? 'Show Formatted View' : 'View Raw JSON Payload'}</span>
-                </button>
-              </div>
-
-              {showJsonPreview ? (
-                <pre className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4 text-xs font-mono text-[#0F172A] overflow-x-auto leading-relaxed">
-                  {JSON.stringify(formData, null, 2)}
-                </pre>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Identity Summary Card */}
-                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4 space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                      <Building2 className="w-3.5 h-3.5 text-[#4F46E5]" />
-                      Core Identity
-                    </h3>
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-[#475569]">Business Name:</dt>
-                        <dd className="font-semibold text-[#0F172A] text-right">{formData.businessName}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-[#475569]">Owner Name:</dt>
-                        <dd className="font-semibold text-[#0F172A] text-right">{formData.ownerName}</dd>
-                      </div>
-                      <div className="pt-1 border-t border-[#E2E8F0]">
-                        <dt className="text-[#475569] text-xs mb-1">Target Audience:</dt>
-                        <dd className="text-[#0F172A] text-xs leading-relaxed">
-                          {formData.targetAudience || <span className="text-[#94A3B8] italic">Not specified</span>}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-
-                  {/* Contact Summary Card */}
-                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4 space-y-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-[#4F46E5]" />
-                      Contact Details
-                    </h3>
-                    <dl className="space-y-2 text-sm">
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-[#475569]">Email:</dt>
-                        <dd className="font-medium text-[#0F172A] text-right">{formData.email}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-[#475569]">Contact Number:</dt>
-                        <dd className="font-medium text-[#0F172A] text-right">{formData.contactNumber}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-[#475569]">WhatsApp:</dt>
-                        <dd className="font-medium text-[#0F172A] text-right">
-                          {formData.whatsappNumber || <span className="text-[#94A3B8] italic">Not provided</span>}
-                        </dd>
-                      </div>
-                    </dl>
-                  </div>
-
-                  {/* Address Summary Card */}
-                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4 space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-[#4F46E5]" />
-                      Location & Address
-                    </h3>
-                    <p className="text-sm text-[#0F172A]">
-                      {[
-                        formData.address.street,
-                        formData.address.city,
-                        formData.address.state,
-                        formData.address.postalCode,
-                        formData.address.country
-                      ]
-                        .filter(Boolean)
-                        .join(', ') || <span className="text-[#94A3B8] italic text-xs">No address details entered</span>}
-                    </p>
-                  </div>
-
-                  {/* Social Links Summary Card */}
-                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4 space-y-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-[#4F46E5]" />
-                      Social Profiles
-                    </h3>
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between gap-2">
-                        <span className="text-[#475569]">Instagram:</span>
-                        <span className="text-[#0F172A] truncate max-w-[220px]">
-                          {formData.socialLinks.instagram || <span className="text-[#94A3B8]">—</span>}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <span className="text-[#475569]">Facebook:</span>
-                        <span className="text-[#0F172A] truncate max-w-[220px]">
-                          {formData.socialLinks.facebook || <span className="text-[#94A3B8]">—</span>}
-                        </span>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <span className="text-[#475569]">YouTube:</span>
-                        <span className="text-[#0F172A] truncate max-w-[220px]">
-                          {formData.socialLinks.youtube || <span className="text-[#94A3B8]">—</span>}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Next Step Prompt Box */}
-              <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[#FFFFFF] border border-[#E2E8F0] flex items-center justify-center shrink-0">
-                    <Layers className="w-4 h-4 text-[#4F46E5]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[#0F172A]">
-                      Up Next: Step 2 — Project Details
-                    </p>
-                    <p className="text-xs text-[#475569]">
-                      Tell me when you are ready to build the fields for Step 2.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsSubmitted(false)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg transition-colors shadow-xs"
-                >
-                  <span>Back to Step 1 Form</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* 3. Step 1 Form Card ('Business Details') */
-        <BusinessDetails/>
-        )}
+        <div>
+          {
+            renderStepContent()
+          }
+        </div>
       </main>
     </div>
   );

@@ -14,11 +14,23 @@ import {
     Globe,
 } from 'lucide-react'
 import { BusinessDetailsSchemaValidation, type BusinessValidationSchemaData } from '../../../schema/validationSchema';
+import { useAppDispatch, useAppSelector } from '../../../hooks/useRedux';
+import { setBusinessDetails } from '../../../redux/slice/websiteCreationSlice';
 
-const BusinessDetails = () => {
+interface PropsType {
+    handleNextStep?: () => void;
+    handlePrevStep?: () => void;
+}
+
+
+const BusinessDetails = (props: PropsType) => {
+
+    const dispatch = useAppDispatch();
+    const savedBusinessDetails = useAppSelector((state) => state.websiteCreation.businessDetails);
+
 
     const formik = useFormik({
-        initialValues: { 
+        initialValues: savedBusinessDetails ?? {
             businessName: "",
             ownerName: "",
             targetAudience: "",
@@ -36,17 +48,18 @@ const BusinessDetails = () => {
             socialLinks: {
                 instagram: "",
                 facebook: "",
-                youtube: "",
+                youtube: ""
             }
-         },
+        },
         validationSchema: BusinessDetailsSchemaValidation,
-        onSubmit: (values)=>{
-            alert()
-            console.log(values)
+        onSubmit: (values) => {
+            dispatch(setBusinessDetails(values));
+            if (props.handleNextStep)
+                props.handleNextStep();
         },
     });
     const { values, errors, handleChange, handleBlur, handleSubmit, touched } = formik;
-
+    console.log(errors)
     return (
         <form
             onSubmit={handleSubmit}
@@ -328,13 +341,13 @@ const BusinessDetails = () => {
                     <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 sm:p-5 space-y-4">
                         <div>
                             <label
-                                htmlFor="street"
+                                htmlFor="address.street"
                                 className="block text-sm font-medium text-[#0F172A] mb-1.5"
                             >
                                 Street Address
                             </label>
                             <input
-                                id="street"
+                                id="address.street"
                                 type="text"
                                 value={values.address.street}
                                 onChange={handleChange}
@@ -346,13 +359,13 @@ const BusinessDetails = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <label
-                                    htmlFor="city"
+                                    htmlFor="address.city"
                                     className="block text-sm font-medium text-[#0F172A] mb-1.5"
                                 >
                                     City
                                 </label>
                                 <input
-                                    id="city"
+                                    id="address.city"
                                     type="text"
                                     value={values.address.city}
                                     onChange={handleChange}
@@ -363,13 +376,13 @@ const BusinessDetails = () => {
 
                             <div>
                                 <label
-                                    htmlFor="state"
+                                    htmlFor="address.state"
                                     className="block text-sm font-medium text-[#0F172A] mb-1.5"
                                 >
                                     State / Province
                                 </label>
                                 <input
-                                    id="state"
+                                    id="address.state"
                                     type="text"
                                     value={values.address.state}
                                     onChange={handleChange}
@@ -380,13 +393,13 @@ const BusinessDetails = () => {
 
                             <div>
                                 <label
-                                    htmlFor="country"
+                                    htmlFor="address.country"
                                     className="block text-sm font-medium text-[#0F172A] mb-1.5"
                                 >
                                     Country
                                 </label>
                                 <input
-                                    id="country"
+                                    id="address.country"
                                     type="text"
                                     value={values.address.country}
                                     onChange={handleChange}
@@ -397,13 +410,13 @@ const BusinessDetails = () => {
 
                             <div>
                                 <label
-                                    htmlFor="postalCode"
+                                    htmlFor="address.postalCode"
                                     className="block text-sm font-medium text-[#0F172A] mb-1.5"
                                 >
                                     Postal Code
                                 </label>
                                 <input
-                                    id="postalCode"
+                                    id="address.postalCode"
                                     type="text"
                                     value={values.address.postalCode}
                                     onChange={handleChange}
@@ -439,7 +452,7 @@ const BusinessDetails = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div>
                             <label
-                                htmlFor="instagram"
+                                htmlFor="socialLinks.instagram"
                                 className="block text-sm font-medium text-[#0F172A] mb-1.5"
                             >
                                 Instagram URL
@@ -449,7 +462,7 @@ const BusinessDetails = () => {
 
                                 </div>
                                 <input
-                                    id="instagram"
+                                    id="socialLinks.instagram"
                                     type="url"
                                     value={values.socialLinks.instagram}
                                     onChange={handleChange}
@@ -461,7 +474,7 @@ const BusinessDetails = () => {
 
                         <div>
                             <label
-                                htmlFor="facebook"
+                                htmlFor="socialLinks.facebook"
                                 className="block text-sm font-medium text-[#0F172A] mb-1.5"
                             >
                                 Facebook URL
@@ -471,7 +484,7 @@ const BusinessDetails = () => {
 
                                 </div>
                                 <input
-                                    id="facebook"
+                                    id="socialLinks.facebook"
                                     type="url"
                                     value={values.socialLinks.facebook}
                                     onChange={handleChange}
@@ -483,7 +496,7 @@ const BusinessDetails = () => {
 
                         <div>
                             <label
-                                htmlFor="youtube"
+                                htmlFor="socialLinks.youtube"
                                 className="block text-sm font-medium text-[#0F172A] mb-1.5"
                             >
                                 YouTube URL
@@ -493,7 +506,7 @@ const BusinessDetails = () => {
 
                                 </div>
                                 <input
-                                    id="youtube"
+                                    id="socialLinks.youtube"
                                     type="url"
                                     value={values.socialLinks.youtube}
                                     onChange={handleChange}

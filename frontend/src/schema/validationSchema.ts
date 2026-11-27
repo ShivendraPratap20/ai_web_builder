@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-
+import { isImageFile } from "../utils";
 
 const SignInValidation = Yup.object({
   userID: Yup.string()
@@ -95,6 +95,7 @@ const BusinessDetailsSchemaValidation = Yup.object().shape({
     street: Yup.string().optional(),
     city: Yup.string().optional(),
     country: Yup.string().optional(),
+    state: Yup.string().optional(),
     postalCode: Yup.string().optional(),
   }),
 
@@ -111,19 +112,117 @@ const BusinessDetailsSchemaValidation = Yup.object().shape({
   }),
 });
 
+const ProjectDetailsSchemaValidation = Yup.object({
+  websiteType: Yup.string()
+    .required('Please select a website type'),
+
+  customWebsiteType: Yup.string()
+    .when('websiteType', {
+      is: 'custom',
+      then: (schema) =>
+        schema
+          .trim()
+          .min(10, 'Please enter at least 10 characters')
+          .required('Please specify your custom website type'),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+
+  websiteDescription: Yup.string()
+    .trim()
+    .min(20, 'Please provide at least 20 characters describing your website goals')
+    .required('Website description is required'),
+
+  referenceWebsite: Yup.string().notRequired(),
+});
+
+const WebsiteRequirementSchemaValidation = Yup.object({
+  pages: Yup.array()
+    .of(
+      Yup.object({
+        id: Yup.string().required(),
+        name: Yup.string().trim().required('Page name is required'),
+        purpose: Yup.string().trim().required('Page purpose is required'),
+      })
+    )
+    .min(1, 'Please add at least one page to generate'),
+});
+
+const AssetsRequirementSchemaValidation = Yup.object({
+  brandLogo: Yup.mixed<File>()
+    .nullable()
+    .test(
+      'is-valid-image',
+      'Brand logo must be a valid picture format (PNG, JPG, WEBP, SVG, GIF, etc.)',
+      (value) => !value || isImageFile(value)
+    ),
+  assets: Yup.array().of(
+    Yup.object({
+      id: Yup.string().required(),
+      name: Yup.string().required(),
+      size: Yup.number().required(),
+      type: Yup.string().required(),
+      notes: Yup.string(),
+    })
+  ),
+  filesInfo: Yup.string().trim(),
+});
+
+const WebsiteStylePreferencesSchemaValidation = Yup.object({
+  design: Yup.object({
+    visualStyle: Yup.string()
+      .oneOf([
+        'minimal',
+        'professional',
+        'modern',
+        'creative',
+        'luxury',
+        'playful',
+        'custom',
+      ])
+      .required('Please select a visual style'),
+    designSystem: Yup.string()
+      .oneOf(['material-ui', 'neumorphism', 'claymorphism', 'none'])
+      .optional(),
+    primaryColor: Yup.string()
+      .trim()
+      .matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/, 'Use a valid hex color (e.g., #4F46E5)')
+      .optional(),
+    secondaryColor: Yup.string()
+      .trim()
+      .matches(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/, 'Use a valid hex color (e.g., #F8FAFC)')
+      .optional(),
+    fontPreference: Yup.string().trim().optional(),
+    referenceWebsites: Yup.array().of(Yup.string().trim()).optional(),
+  }),
+});
+
 type SignInFormData = Yup.InferType<typeof SignInValidation>;
 type SignUpFormData = Yup.InferType<typeof SignInValidation>;
 type BusinessValidationSchemaData = Yup.InferType<typeof BusinessDetailsSchemaValidation>;
+type ProjectDetailsData = Yup.InferType<typeof ProjectDetailsSchemaValidation>;
+type WebsiteRequirementSchemaValidationData = Yup.InferType<typeof WebsiteRequirementSchemaValidation>;
+type AssetsRequirementSchemaValidationData = Yup.InferType<typeof AssetsRequirementSchemaValidation>;
+type WebsiteStylePreferencesSchemaValidationData = Yup.InferType<typeof WebsiteStylePreferencesSchemaValidation>;
+
+
 
 
 export {
   SignInValidation,
   SignUpValidationSchema,
   BusinessDetailsSchemaValidation,
+  ProjectDetailsSchemaValidation,
+  WebsiteRequirementSchemaValidation,
+  AssetsRequirementSchemaValidation,
+  WebsiteStylePreferencesSchemaValidation,
 };
 
 export type {
   SignInFormData,
   SignUpFormData,
   BusinessValidationSchemaData,
+  ProjectDetailsData,
+  WebsiteRequirementSchemaValidationData,
+  AssetsRequirementSchemaValidationData,
+  WebsiteStylePreferencesSchemaValidationData,
 }
